@@ -42,7 +42,7 @@ endif()
 
 # find_package(Eigen3 3.1.0 REQUIRED)
 # set(Eigen3_DIR /usr/local/include/eigen3)
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 REQUIRED NO_MODULE)
 # set(Pangolin_DIR /usr/local/include/pangolin)
 find_package(Pangolin REQUIRED)
 
