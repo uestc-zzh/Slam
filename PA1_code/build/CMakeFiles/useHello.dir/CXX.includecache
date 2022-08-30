@@ -6,3 +6,9 @@
 
 #IncludeRegexTransform: 
 
+../include/hello.h
+
+/home/zzh/SLAM/PA1_code/useHello.cpp
+hello.h
+/home/zzh/SLAM/PA1_code/hello.h
+

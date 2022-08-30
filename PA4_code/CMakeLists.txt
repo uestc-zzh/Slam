@@ -21,8 +21,8 @@ include_directories(${G2O_INCLUDE_DIRS})
 # Eigen
 include_directories("/usr/include/eigen3")
 
-add_executable(gaussnewton gaussnewton.cpp)
-target_link_libraries(gaussnewton ${OpenCV_LIBS})
+add_executable(gaussNewton gaussNewton.cpp)
+target_link_libraries(gaussNewton ${OpenCV_LIBS})
 
 # add_executable(ceresCurveFitting ceresCurveFitting.cpp)
 # target_link_libraries(ceresCurveFitting ${OpenCV_LIBS} ${CERES_LIBRARIES})
