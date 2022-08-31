@@ -111,6 +111,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named ceresCurveFitting
+
+# Build rule for target.
+ceresCurveFitting: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 ceresCurveFitting
+.PHONY : ceresCurveFitting
+
+# fast build rule for target.
+ceresCurveFitting/fast:
+	$(MAKE) -f CMakeFiles/ceresCurveFitting.dir/build.make CMakeFiles/ceresCurveFitting.dir/build
+.PHONY : ceresCurveFitting/fast
+
+#=============================================================================
 # Target rules for targets named gaussNewton
 
 # Build rule for target.
@@ -122,6 +135,33 @@ gaussNewton: cmake_check_build_system
 gaussNewton/fast:
 	$(MAKE) -f CMakeFiles/gaussNewton.dir/build.make CMakeFiles/gaussNewton.dir/build
 .PHONY : gaussNewton/fast
+
+ceresCurveFitting.o: ceresCurveFitting.cpp.o
+
+.PHONY : ceresCurveFitting.o
+
+# target to build an object file
+ceresCurveFitting.cpp.o:
+	$(MAKE) -f CMakeFiles/ceresCurveFitting.dir/build.make CMakeFiles/ceresCurveFitting.dir/ceresCurveFitting.cpp.o
+.PHONY : ceresCurveFitting.cpp.o
+
+ceresCurveFitting.i: ceresCurveFitting.cpp.i
+
+.PHONY : ceresCurveFitting.i
+
+# target to preprocess a source file
+ceresCurveFitting.cpp.i:
+	$(MAKE) -f CMakeFiles/ceresCurveFitting.dir/build.make CMakeFiles/ceresCurveFitting.dir/ceresCurveFitting.cpp.i
+.PHONY : ceresCurveFitting.cpp.i
+
+ceresCurveFitting.s: ceresCurveFitting.cpp.s
+
+.PHONY : ceresCurveFitting.s
+
+# target to generate assembly for a file
+ceresCurveFitting.cpp.s:
+	$(MAKE) -f CMakeFiles/ceresCurveFitting.dir/build.make CMakeFiles/ceresCurveFitting.dir/ceresCurveFitting.cpp.s
+.PHONY : ceresCurveFitting.cpp.s
 
 gaussNewton.o: gaussNewton.cpp.o
 
@@ -158,7 +198,11 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
+	@echo "... ceresCurveFitting"
 	@echo "... gaussNewton"
+	@echo "... ceresCurveFitting.o"
+	@echo "... ceresCurveFitting.i"
+	@echo "... ceresCurveFitting.s"
 	@echo "... gaussNewton.o"
 	@echo "... gaussNewton.i"
 	@echo "... gaussNewton.s"

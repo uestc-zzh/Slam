@@ -1,3 +1,4 @@
 /home/zzh/SLAM/PA4_code/build/CMakeFiles/rebuild_cache.dir
 /home/zzh/SLAM/PA4_code/build/CMakeFiles/edit_cache.dir
+/home/zzh/SLAM/PA4_code/build/CMakeFiles/ceresCurveFitting.dir
 /home/zzh/SLAM/PA4_code/build/CMakeFiles/gaussNewton.dir

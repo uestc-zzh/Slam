@@ -76,5 +76,6 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
+  "CMakeFiles/ceresCurveFitting.dir/DependInfo.cmake"
   "CMakeFiles/gaussNewton.dir/DependInfo.cmake"
   )
