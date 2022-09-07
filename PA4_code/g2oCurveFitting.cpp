@@ -27,7 +27,7 @@ public:
         _estimate << 0, 0, 0;
     }
 
-    // 更新
+    // 更新 增量计算后的更新xk+1=xk+Δx
     virtual void oplusImpl(const double *update) override
     {
         _estimate += Eigen::Vector3d(update);
