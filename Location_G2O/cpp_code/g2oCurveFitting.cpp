@@ -23,7 +23,7 @@ using namespace std;
 vector<pair<double, double>> anchor{{0, 0}, {0, 1.72}, {0.93, 1.72}, {0.93, 0}, {0.46, 0.70}, {0.46, 1.25}};
 
 // 优化点属性
-class Particles
+struct Particles
 {
   Particles() : x(0), y(0), theta(0), spd(1.0) {}
   Particles(double x, double y, double theta, double speed) : x(x), y(y), theta(theta), spd(speed) {}
@@ -48,12 +48,12 @@ public:
   // 更新
   virtual void oplusImpl(const double *update) override
   {
-    update = reinterpret_cast<const Particles *>(update);
+    const Particles* p = reinterpret_cast<const Particles *>(update);
     cv::RNG rng;
-    _estimate.x = update.x + rng.gaussian(1.0 * 1.0);
-    _estimate.y = update.y + rng.gaussian(1.0 * 1.0);
-    _estimate.theta = fmod(update.theta, 2 * PI); // 取模
-    _estimate.spd = update.spd + rng.gaussian(1.0 * 1.0);
+    _estimate.x = p->x + rng.gaussian(1.0 * 1.0);
+    _estimate.y = p->y + rng.gaussian(1.0 * 1.0);
+    _estimate.theta = fmod(p->theta, 2 * PI); // 取模
+    _estimate.spd = p->spd + rng.gaussian(1.0 * 1.0);
     if (_estimate.spd >= 5 || _estimate.spd < 0)
     {
       _estimate.spd = 1.0;
@@ -70,19 +70,19 @@ public:
 };
 
 // 误差模型 模板参数：观测值维度，类型，连接顶点类型
-// 观测值维度为6？ 观测值类型为6个测距值的vector?
-class myEdge : public g2o::BaseUnaryEdge<6, vector<double>distance, myVertex>
+// 观测值维度为6？不明白 观测值类型为6个测距值的vector?
+class myEdge : public g2o::BaseUnaryEdge<1, vector<double>, myVertex>
 {
 public:
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-  // myEdge(vector<double>distance) : BaseUnaryEdge(), _dist(distance) {}
+  // myEdge(vector<double> distance) : BaseUnaryEdge(), _dist(distance) {}
   myEdge() : BaseUnaryEdge(){}
 
   // 计算定位模型误差
   virtual void computeError() override
   {
-    const myVertex *v = reinterpret_cast<const Particles *>(_vertices[0]);
+    const myVertex *v = reinterpret_cast<const myVertex *>(_vertices[0]);
     const Particles particle = v->estimate();
     // e=sigam求和(|z2-((x-xanchor)2+(y-yanchor)2)|)
     // x的误差
@@ -121,78 +121,88 @@ public:
   virtual bool write(ostream &out) const {}
 
 public:
-  vector<double> _dist; // dist 为_measurement
+  // vector<double> _dist; // dist 为_measurement
 };
 
 int main(int argc, char **argv)
 {
   // 读取测量数据
   ifstream f;
-  f.open("../5-18/data/outcar/1-1");
-  if(!file.is_open()){
+  f.open("../../5-18-data/outcar/1-1");
+  if(!f.is_open()){
     cout<<"open file failed"<<endl;
-    file.close();
+    f.close();
     return 0;
   }
   string s;
-  while(getline(file,s)){
-    cout<<s<<endl;
-  }
-  file.close();
+  vector<vector<double>>dist;
+  // while(getline(f,s)){
+  //   // process data,读取距离数据
+  //   // cout<<s<<endl;
+  // }
+  f.close();
   
-  // double w_sigma = 1.0;                 // 噪声Sigma值
-  // double inv_sigma = 1.0 / w_sigma;
-  // cv::RNG rng; // OpenCV随机数产生器
+  double w_sigma = 1.0;                 // 噪声Sigma值
+  double inv_sigma = 1.0 / w_sigma;
+  cv::RNG rng; // OpenCV随机数产生器
 
-  // vector<double> x_data, y_data; // 数据
-  // for (int i = 0; i < N; i++)
-  // {
-  //   double x = i / 100.0;
-  //   x_data.push_back(x);
-  //   y_data.push_back(exp(ar * x * x + br * x + cr) + rng.gaussian(w_sigma * w_sigma));
-  // }
+  // 构建图优化，先设定g2o
+  typedef g2o::BlockSolver<g2o::BlockSolverTraits<4, 6>> BlockSolverType;           // 每个误差项优化变量维度为4(x,y,theta,spd)，误差值维度为6?
+  typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType; // 线性求解器类型
 
-  // // 构建图优化，先设定g2o
-  // typedef g2o::BlockSolver<g2o::BlockSolverTraits<3, 1>> BlockSolverType;           // 每个误差项优化变量维度为3，误差值维度为1
-  // typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType; // 线性求解器类型
+  // 梯度下降方法，可以从GN, LM, DogLeg 中选
+  auto solver = new g2o::OptimizationAlgorithmGaussNewton(
+      g2o::make_unique<BlockSolverType>(g2o::make_unique<LinearSolverType>()));
+  g2o::SparseOptimizer optimizer; // 图模型
+  optimizer.setAlgorithm(solver); // 设置求解器
+  optimizer.setVerbose(true);     // 打开调试输出
 
-  // // 梯度下降方法，可以从GN, LM, DogLeg 中选
-  // auto solver = new g2o::OptimizationAlgorithmGaussNewton(
-  //     g2o::make_unique<BlockSolverType>(g2o::make_unique<LinearSolverType>()));
-  // g2o::SparseOptimizer optimizer; // 图模型
-  // optimizer.setAlgorithm(solver); // 设置求解器
-  // optimizer.setVerbose(true);     // 打开调试输出
+  // 根据dist数据行数增加顶点，滑动窗口如何删点？
+  for(int i=0;i<dist.size();i++){
+    // // 往图中增加顶点
+    // CurveFittingVertex *v = new CurveFittingVertex();
+    // v->setEstimate(Eigen::Vector3d(ae, be, ce));
+    // v->setId(0);
+    // optimizer.addVertex(v);
+    myVertex *v = new myVertex();
+    // 增加一条初始边
+    v->setEstimate(Particles());
+    v->setId(i);
+    optimizer.addVertex(v);
 
-  // // 往图中增加顶点
-  // // CurveFittingVertex *v = new CurveFittingVertex();
-  // // v->setEstimate(Eigen::Vector3d(ae, be, ce));
-  // // v->setId(0);
-  // // optimizer.addVertex(v);
-  // myVertex *v = new myVertex();
+    // // 往图中增加边
+    // for (int i = 0; i < 6; i++)
+    // {
+    //   CurveFittingEdge *edge = new CurveFittingEdge(x_data[i]);
+    //   edge->setId(i);
+    //   edge->setVertex(0, v);                                                                   // 设置连接的顶点
+    //   edge->setMeasurement(y_data[i]);                                                         // 观测数值
+    //   edge->setInformation(Eigen::Matrix<double, 1, 1>::Identity() * 1 / (w_sigma * w_sigma)); // 信息矩阵：协方差矩阵之逆
+    //   optimizer.addEdge(edge);
+    // }
+    myEdge *edge = new myEdge();
+    edge->setId(i);
+    edge->setVertex(i,v);
+    // 传入该时刻的6个测距值
+    edge->setMeasurement(dist[i]);
+    // 信息矩阵：协方差矩阵之逆 维数同误差维度相同，都为6？
+    edge->setInformation(Eigen::Matrix<double, 6, 6>::Identity() * 1 / (w_sigma * w_sigma));
+    optimizer.addEdge(edge);
 
-  // // 往图中增加边
-  // for (int i = 0; i < N; i++)
-  // {
-  //   CurveFittingEdge *edge = new CurveFittingEdge(x_data[i]);
-  //   edge->setId(i);
-  //   edge->setVertex(0, v);                                                                   // 设置连接的顶点
-  //   edge->setMeasurement(y_data[i]);                                                         // 观测数值
-  //   edge->setInformation(Eigen::Matrix<double, 1, 1>::Identity() * 1 / (w_sigma * w_sigma)); // 信息矩阵：协方差矩阵之逆
-  //   optimizer.addEdge(edge);
-  // }
+    // 执行优化，滑动窗口还需要删点
+    cout << "start optimization" << endl;
+    chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
+    optimizer.initializeOptimization();
+    // 优化次数如何考虑？
+    optimizer.optimize(10);
+    chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+    chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+    cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
 
-  // // 执行优化
-  // cout << "start optimization" << endl;
-  // chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-  // optimizer.initializeOptimization();
-  // optimizer.optimize(10);
-  // chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
-  // chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-  // cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
-
-  // // 输出优化值
-  // Eigen::Vector3d abc_estimate = v->estimate();
-  // cout << "estimated model: " << abc_estimate.transpose() << endl;
+    // 输出优化值
+    Particles p_estimate = v->estimate();
+    cout << "estimated model: " << p_estimate.x <<" "<< p_estimate.y<< endl;
+  }
 
   return 0;
 }
