@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.8)
 project(Location_G2O)
 
-set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS "-std=c++14 -O3")
+# set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "-std=c++14 -O3 -g")
 
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
