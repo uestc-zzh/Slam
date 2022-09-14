@@ -50,7 +50,9 @@ public:
   {
     const Particles* p = reinterpret_cast<const Particles *>(update);
     cv::RNG rng;
+    // _estimate.x = p->x + rng.gaussian(1.0 * 1.0);
     _estimate.x = p->x + rng.gaussian(1.0 * 1.0);
+    
     _estimate.y = p->y + rng.gaussian(1.0 * 1.0);
     _estimate.theta = fmod(p->theta, 2 * PI); // 取模
     _estimate.spd = p->spd + rng.gaussian(1.0 * 1.0);
