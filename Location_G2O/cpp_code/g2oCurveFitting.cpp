@@ -19,7 +19,7 @@
 using namespace std;
 
 // anchor position
-vector<pair<double, double>> anchor{{0, 0}, {0, 1.72}, {0.93, 1.72}, {0.93, 0}, {0.46, 0.70}, {0.46, 1.25}};
+vector<pair<double, double>> anchor{{0, 0}, {0, 172}, {93, 172}, {93, 0}, {46, 70}, {46, 125}};
 
 // 优化点直接定义为Eigen::Vector2d,分别为x，y
 
@@ -49,8 +49,6 @@ public:
 };
 
 // 误差模型 模板参数：观测值维度，类型，连接顶点类型
-// error维度，error数据类型，与error相连的节点类型
-// 观测值维度为6？不明白 观测值类型为6个测距值的vector?
 // 观测值维度为6，则是将6个测距值算6条边；
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 
@@ -70,12 +68,12 @@ public:
     const Eigen::Vector2d particle = v->estimate();
     // e=sigam求和(|z2-((x-xanchor)2+(y-yanchor)2)|)
     // 误差
-    _error(0, 0) = fabs(_measurement(0,0) * _measurement(0,0) - ((particle(0, 0) - anchor[0].first) * (particle(0, 0) - anchor[0].first) + (particle(1, 0) - anchor[0].second) * (particle(1, 0) - anchor[0].second)));
-    _error(1, 0) = fabs(_measurement(1,0) * _measurement(1,0) - ((particle(0, 0) - anchor[1].first) * (particle(0, 0) - anchor[1].first) + (particle(1, 0) - anchor[1].second) * (particle(1, 0) - anchor[1].second)));
-    _error(2, 0) = fabs(_measurement(2,0) * _measurement(2,0) - ((particle(0, 0) - anchor[2].first) * (particle(0, 0) - anchor[2].first) + (particle(1, 0) - anchor[2].second) * (particle(1, 0) - anchor[2].second)));
-    _error(3, 0) = fabs(_measurement(3,0) * _measurement(3,0) - ((particle(0, 0) - anchor[3].first) * (particle(0, 0) - anchor[3].first) + (particle(1, 0) - anchor[3].second) * (particle(1, 0) - anchor[3].second)));
-    _error(4, 0) = fabs(_measurement(4,0) * _measurement(4,0) - ((particle(0, 0) - anchor[4].first) * (particle(0, 0) - anchor[4].first) + (particle(1, 0) - anchor[4].second) * (particle(1, 0) - anchor[4].second)));
-    _error(5, 0) = fabs(_measurement(5,0) * _measurement(5,0) - ((particle(0, 0) - anchor[5].first) * (particle(0, 0) - anchor[5].first) + (particle(1, 0) - anchor[5].second) * (particle(1, 0) - anchor[5].second)));
+    _error(0, 0) = fabs(_measurement(0, 0) * _measurement(0, 0) - ((particle(0, 0) - anchor[0].first) * (particle(0, 0) - anchor[0].first) + (particle(1, 0) - anchor[0].second) * (particle(1, 0) - anchor[0].second)));
+    _error(1, 0) = fabs(_measurement(1, 0) * _measurement(1, 0) - ((particle(0, 0) - anchor[1].first) * (particle(0, 0) - anchor[1].first) + (particle(1, 0) - anchor[1].second) * (particle(1, 0) - anchor[1].second)));
+    _error(2, 0) = fabs(_measurement(2, 0) * _measurement(2, 0) - ((particle(0, 0) - anchor[2].first) * (particle(0, 0) - anchor[2].first) + (particle(1, 0) - anchor[2].second) * (particle(1, 0) - anchor[2].second)));
+    _error(3, 0) = fabs(_measurement(3, 0) * _measurement(3, 0) - ((particle(0, 0) - anchor[3].first) * (particle(0, 0) - anchor[3].first) + (particle(1, 0) - anchor[3].second) * (particle(1, 0) - anchor[3].second)));
+    _error(4, 0) = fabs(_measurement(4, 0) * _measurement(4, 0) - ((particle(0, 0) - anchor[4].first) * (particle(0, 0) - anchor[4].first) + (particle(1, 0) - anchor[4].second) * (particle(1, 0) - anchor[4].second)));
+    _error(5, 0) = fabs(_measurement(5, 0) * _measurement(5, 0) - ((particle(0, 0) - anchor[5].first) * (particle(0, 0) - anchor[5].first) + (particle(1, 0) - anchor[5].second) * (particle(1, 0) - anchor[5].second)));
   }
 
   // // 计算雅可比矩阵
@@ -135,7 +133,7 @@ int main(int argc, char **argv)
   // cv::RNG rng; // OpenCV随机数产生器
 
   // 构建图优化，先设定g2o
-  typedef g2o::BlockSolver<g2o::BlockSolverTraits<4, 6>> BlockSolverType;           // 每个误差项优化变量维度为4(x,y,theta,spd)，误差值维度为6?
+  typedef g2o::BlockSolver<g2o::BlockSolverTraits<2, 6>> BlockSolverType;           // 每个误差项优化变量维度为2(x,y)，误差值维度为6
   typedef g2o::LinearSolverDense<BlockSolverType::PoseMatrixType> LinearSolverType; // 线性求解器类型
 
   // 梯度下降方法，可以从GN, LM, DogLeg 中选
@@ -155,11 +153,12 @@ int main(int argc, char **argv)
     // v->setId(0);
     // optimizer.addVertex(v);
     myVertex *v = new myVertex();
-    vs.emplace_back(v);
     // 直接将所有点初始位置设为0,0，需优化
     v->setEstimate(Eigen::Vector2d(0, 0));
     v->setId(i);
     optimizer.addVertex(v);
+
+    vs.emplace_back(v);
 
     // // 往图中增加边
     // for (int i = 0; i < 6; i++)
@@ -173,18 +172,13 @@ int main(int argc, char **argv)
     // }
     myEdge *edge = new myEdge();
     edge->setId(i);
-    edge->setVertex(i, v);
+    edge->setVertex(i, vs[i]);
     // 传入该时刻的6个测距值
     Vector6d vector_dist;
     vector_dist << dist[i][0], dist[i][1], dist[i][2], dist[i][3], dist[i][4], dist[i][5];
-    // vector_dist(0,0)=dist[i][0];
-    // vector_dist(1,0)=dist[i][1];
-    // vector_dist(2,0)=dist[i][2];
-    // vector_dist(3,0)=dist[i][3];
-    // vector_dist(4,0)=dist[i][4];
-    // vector_dist(5,0)=dist[i][5];
+    // cout << "vector_dist: " << vector_dist.transpose() << endl;
     edge->setMeasurement(vector_dist);
-    // 信息矩阵：协方差矩阵之逆 维数同误差维度相同，都为6？
+    // 信息矩阵：协方差矩阵之逆 维数同误差维度相同
     edge->setInformation(Eigen::Matrix<double, 6, 6>::Identity() * 1 / (w_sigma * w_sigma));
     optimizer.addEdge(edge);
   }
