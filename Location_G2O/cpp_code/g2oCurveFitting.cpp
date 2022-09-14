@@ -147,7 +147,7 @@ int main(int argc, char **argv)
 
   vector<myVertex *> vs;
   // 根据dist数据行数增加顶点，滑动窗口如何删点？
-  for (int i = 0; i < dist_size; i++)
+  for (int i = 0; i < 3; i++)
   {
     // // 往图中增加顶点
     // CurveFittingVertex *v = new CurveFittingVertex();
@@ -199,7 +199,7 @@ int main(int argc, char **argv)
   cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
 
   // 输出优化值
-  for (int i = 0; i < vs.size(); i++)
+  for (int i = 0; i < 3; i++)
   {
     Eigen::Vector2d p_estimate = vs[i]->estimate();
     cout << "estimated model: " << p_estimate.transpose() << endl;
