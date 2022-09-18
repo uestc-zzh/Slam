@@ -145,6 +145,7 @@ int main(int argc, char **argv)
 
   vector<myVertex *> vs;
   // 根据dist数据行数增加顶点，滑动窗口如何删点？
+  // for (int i = 0; i < dist_size; i++)
   for (int i = 0; i < 3; i++)
   {
     // // 往图中增加顶点
