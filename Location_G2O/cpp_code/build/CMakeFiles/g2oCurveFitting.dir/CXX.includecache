@@ -27,6 +27,8 @@ g2o/core/optimization_algorithm_dogleg.h
 -
 g2o/solvers/dense/linear_solver_dense.h
 -
+g2o/core/robust_kernel_impl.h
+-
 Eigen/Core
 -
 opencv2/core/core.hpp

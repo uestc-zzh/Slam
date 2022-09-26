@@ -8,6 +8,7 @@
 #include <g2o/core/optimization_algorithm_gauss_newton.h>
 #include <g2o/core/optimization_algorithm_dogleg.h>
 #include <g2o/solvers/dense/linear_solver_dense.h>
+#include <g2o/core/robust_kernel_impl.h>
 #include <Eigen/Core>
 #include <opencv2/core/core.hpp>
 #include <cmath>
@@ -145,8 +146,8 @@ int main(int argc, char **argv)
 
   vector<myVertex *> vs;
   // 根据dist数据行数增加顶点，滑动窗口如何删点？
-  // for (int i = 0; i < dist_size; i++)
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < dist_size; i++)
+  // for (int i = 0; i < 3; i++)
   {
     // // 往图中增加顶点
     // CurveFittingVertex *v = new CurveFittingVertex();
@@ -173,7 +174,9 @@ int main(int argc, char **argv)
     // }
     myEdge *edge = new myEdge();
     edge->setId(i);
-    edge->setVertex(i, vs[i]);
+    // issue 
+    // edge->setVertex(i, vs[i]);
+    edge->setVertex(0, vs[i]);
     // 传入该时刻的6个测距值
     Vector6d vector_dist;
     vector_dist << dist[i][0], dist[i][1], dist[i][2], dist[i][3], dist[i][4], dist[i][5];
@@ -181,6 +184,8 @@ int main(int argc, char **argv)
     edge->setMeasurement(vector_dist);
     // 信息矩阵：协方差矩阵之逆 维数同误差维度相同
     edge->setInformation(Eigen::Matrix<double, 6, 6>::Identity() * 1 / (w_sigma * w_sigma));
+    // edge->setInformation(Matrix2d::Identity());
+    edge->setRobustKernel(new g2o::RobustKernelHuber());
     optimizer.addEdge(edge);
   }
   // 执行优化，滑动窗口还需要删点
@@ -194,10 +199,11 @@ int main(int argc, char **argv)
   cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
 
   // 输出优化值
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < dist_size; i++)
   {
     Eigen::Vector2d p_estimate = vs[i]->estimate();
-    cout << "estimated model: " << p_estimate.transpose() << endl;
+    cout << p_estimate.transpose() << endl;
+    // cout << "estimated model: " << p_estimate.transpose() << endl;
   }
 
   return 0;
