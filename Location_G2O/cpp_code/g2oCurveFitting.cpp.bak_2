@@ -21,10 +21,9 @@
 using namespace std;
 
 #define MAX_DIST_SIZE 1000
-#define WINDOW_SIZE 10
 
 // anchor position
-vector<pair<double, double>> anchor{{-0.72, 2.0}, {-0.65, -2.0}, {0.65, -2.0}, {0.72, 2.0}, {0.0, 1.35}, {0.0, -1.58}};
+vector<pair<double, double>> anchor{{0, 0}, {0, 172}, {93, 172}, {93, 0}, {46, 70}, {46, 125}};
 
 // 优化点直接定义为Eigen::Vector2d,分别为x，y
 
@@ -108,7 +107,7 @@ int main(int argc, char **argv)
 {
   // 读取测量数据
   ifstream f;
-  f.open("../../5-18-data/dingdian14.txt");
+  f.open("../../5-18-data/518data_1.txt");
   if (!f.is_open())
   {
     cout << "open file failed" << endl;
@@ -118,34 +117,16 @@ int main(int argc, char **argv)
   string s;
   vector<vector<double>> dist(MAX_DIST_SIZE, vector<double>(6, 0));
   int idx = 0;
-  // while (getline(f, s))
-  // {
-  //   for (int jdx = 0; jdx < 6; jdx++)
-  //   {
-  //     dist[idx][jdx] = stod(s.substr(0 + jdx * 4, 3));
-  //     cout<<dist[idx][jdx]<<" ";
-  //   }
-  //   idx++;
-  // }
-  while (getline(f, s)) {
-    std::istringstream ss(s);
-    for (int jdx = 0; jdx < 6; jdx++) {
-      ss >> dist[idx][jdx];
+  while (getline(f, s))
+  {
+    for (int jdx = 0; jdx < 6; jdx++)
+    {
+      dist[idx][jdx] = stod(s.substr(0 + jdx * 4, 3));
     }
     idx++;
   }
   f.close();
-
   int dist_size = idx;
-
-  // 输出优化值
-  ofstream outputFile("g2o.txt");
-
-  // Check if the file is successfully opened
-  if (!outputFile.is_open()) {
-    std::cerr << "open file FAILED." << std::endl;
-    return 0;
-  }
 
   // 构建图优化，先设定g2o
   typedef g2o::BlockSolver<g2o::BlockSolverTraits<2, 1>> BlockSolverType;           // 每个误差项优化变量维度为2(x,y)，误差值维度为6
@@ -158,15 +139,13 @@ int main(int argc, char **argv)
   optimizer.setAlgorithm(solver); // 设置求解器
   optimizer.setVerbose(true);     // 打开调试输出
 
+  
   double p_sigma = 2.0; // 预测噪声Sigma值
   double w_sigma = 1.0; // 测量噪声Sigma值
   vector<myVertex *> vs;
-  vector<constraitEdge *> c_edges;
-  vector<myEdge *> m_edges;
-
+  // 根据dist数据行数增加顶点，滑动窗口如何删点？
   for (int i = 0; i < dist_size; i++)
   {
-
     myVertex *v = new myVertex();
 
     if (i == 0)
@@ -188,74 +167,49 @@ int main(int argc, char **argv)
       e->setId(i + dist_size);
       e->setVertex(0, vs[i]);
       e->setVertex(1, vs[i - 1]);
-      e->setMeasurement(0.1); // 约束相邻点之间的距离
+      e->setMeasurement(0.3); // 约束相邻点之间的距离
       e->setInformation(Eigen::Matrix<double, 1, 1>::Identity()* 1 / (p_sigma * p_sigma)); // 设置信息矩阵
       e->setRobustKernel(new g2o::RobustKernelHuber());
       optimizer.addEdge(e);
-
-      c_edges.emplace_back(e);
     }
 
-  // 传入该时刻的6个测距值
-    Vector6d vector_dist;
-    vector_dist << dist[i][0], dist[i][1], dist[i][2], dist[i][3], dist[i][4], dist[i][5];
-    
     myEdge *edge = new myEdge();
     edge->setId(i);
     edge->setVertex(0, vs[i]);
+    // 传入该时刻的6个测距值
+    Vector6d vector_dist;
+    vector_dist << dist[i][0], dist[i][1], dist[i][2], dist[i][3], dist[i][4], dist[i][5];
     edge->setMeasurement(vector_dist);
     // 信息矩阵：协方差矩阵之逆 维数同误差维度相同
     edge->setInformation(Eigen::Matrix<double, 6, 6>::Identity() * 1 / (w_sigma * w_sigma));
+    // edge->setInformation(Matrix2d::Identity());
     edge->setRobustKernel(new g2o::RobustKernelHuber());
     optimizer.addEdge(edge);
-
-    m_edges.emplace_back(edge);
-
-    if (i >= WINDOW_SIZE)
-    {
-      // 删除窗口中最早的顶点及其相连的边
-      myVertex *old_vertex = vs[i - WINDOW_SIZE];
-      optimizer.removeVertex(old_vertex);
-
-      constraitEdge *old_c_edge = c_edges[i - WINDOW_SIZE];
-      optimizer.removeEdge(old_c_edge);
-
-      myEdge *old_m_edge = m_edges[i - WINDOW_SIZE];
-      optimizer.removeEdge(old_m_edge); 
-
-      vs[i-WINDOW_SIZE]->setFixed(true);
-      optimizer.initializeOptimization();
-      optimizer.optimize(5);
-      outputFile << vs[i-WINDOW_SIZE]->estimate().transpose() << endl;
-    }
-    else {
-      optimizer.initializeOptimization();
-      optimizer.optimize(5);
-      outputFile << vs[i]->estimate().transpose() << endl;
-    }
-
-    // cout << "Vertex " << vs[0]->id() << ": " << vs[0]->estimate().transpose() << endl;
   }
+  // 执行优化，滑动窗口还需要删点
+  cout << "start optimization" << endl;
+  chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
+  optimizer.initializeOptimization();
+  // 优化次数如何考虑？
+  optimizer.optimize(10);
+  chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
+  chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
+  cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
 
-  // cout << "start optimization" << endl;
-  // chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
-  // optimizer.initializeOptimization();
-  // optimizer.optimize(10);
-  // chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
-  // chrono::duration<double> time_used = chrono::duration_cast<chrono::duration<double>>(t2 - t1);
-  // cout << "solve time cost = " << time_used.count() << " seconds. " << endl;
+  // 输出优化值
+  ofstream outputFile("g2o.txt");
 
-  
-  // for (int i = 0; i < dist_size; i++)
-  // {
-  //   Eigen::Vector2d p_estimate = vs[i]->estimate();
-  //   // cout << p_estimate.transpose() << endl;
-  //   outputFile << p_estimate.transpose() << endl;
-  // }
-  
-  // for (const auto& vertex : vs) {
-  //     cout << "Vertex " << vertex->id() << ": " << vertex->estimate().transpose() << endl;
-  // }
+  // Check if the file is successfully opened
+  if (!outputFile.is_open()) {
+    std::cerr << "open file FAILED." << std::endl;
+    return 0;
+  }
+  for (int i = 0; i < dist_size; i++)
+  {
+    Eigen::Vector2d p_estimate = vs[i]->estimate();
+    // cout << p_estimate.transpose() << endl;
+    outputFile << p_estimate.transpose() << endl;
+  }
 
   return 0;
 }
